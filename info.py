@@ -5,6 +5,13 @@ from libra import *
 import os
 import requests
 from time import sleep
+import concurrent.futures
+import urllib.request
+
+
+from concurrent.futures import as_completed
+
+
 api = mangadex.Api()
 
 #Download url to path if not exists
@@ -15,6 +22,21 @@ def download(url,path,force=False):
             handler.write(img_data)
         return 1
     return 0
+def download_for_multiple(url,path,force=False):
+    return (download(url,path,force),path)
+
+def download_multiple(urls_paths,force=False):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+        futures = [executor.submit(download_for_multiple, url_path[0], url_path[1]) for url_path in urls_paths]
+        for future in as_completed(futures):
+            # retrieve result
+            res,path  = future.result()
+            # check for a link that was skipped
+            if res :
+                print(f'Downloaded')
+            else:
+                print(f'>skipped {path}')
+
 
 def downloadCover(covers,volume,path):
     if volume in covers:
@@ -119,14 +141,14 @@ class Manga:
             #for i,link in enumerate(links):
             #    print(link)
             #    download(link,f"{path}/{i}.jpg")
-            
-            
+            URLS_PATHS=[[link,f"{path}/{i}.jpg"] for i,link in enumerate(links)]
+            download_multiple(URLS_PATHS)            
             sleep(0.5)
     
 
 if __name__ == "__main__":
-    idManga='a1422bad-4598-4018-95ae-888435bafe67'
-    manga=Manga(idManga)
+    idManga='d86cf65b-5f6c-437d-a0af-19a31f94ec55'
+    manga=Manga(idManga,'it')
     # print(manga)
     #print(manga.capitoli)
     print(manga.volumes)
