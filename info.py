@@ -32,10 +32,10 @@ def download_multiple(urls_paths,force=False):
             # retrieve result
             res,path  = future.result()
             # check for a link that was skipped
-            if res :
+            """if res :
                 print(f'Downloaded')
             else:
-                print(f'>skipped {path}')
+                print(f'>skipped {path}')"""
 
 
 def downloadCover(covers,volume,path):
@@ -87,7 +87,6 @@ class Manga:
                 self.groupsNum[a] += 1
             else:
                 self.groupsNum[a] = 1
-        print(self.groupsNum)
 
     def __str__(self):
         return f"{self.manga}"
@@ -108,48 +107,45 @@ class Manga:
                     vett[indice]=a
             else:
                 vett[indice]=a
-            print(vett)
 
         e=sorted(list(vett))
         f=[]
         for a in e:
             f.append(vett[a])
-        print([(a,a.chapter) for a in f])
 
         coverss=api.get_coverart_list(manga=self.idManga,limit=100)
-        print(coverss)
         covers={}
         for a in coverss:
             if   a.fileName.find('.jpg')!=-1:
                 covers[a.volume]=a
-        print(f"Coversss:::: {covers}")
-
-        for a in f:
-
+        URLS_PATHS_TOT=[]
+        conta=1
+        for i,a in enumerate(f):
+            
             volume=a.volume
             path = f'./{self.title}/{volume}'
             createDir(path)
             coverPath=f"{path}/\"0cover"
             downloadCover(covers,volume,coverPath)
 
-
-            path=path+f"/{a.chapter}"
+            chapter=a.chapter
+            path=path+f"/{chapter}"
             createDir(path)
-
+            loading(i/len(f),f'Downloading {volume}-{chapter}')
             links=a.fetch_chapter_images()
-
-            #for i,link in enumerate(links):
-            #    print(link)
-            #    download(link,f"{path}/{i}.jpg")
             URLS_PATHS=[[link,f"{path}/{i}.jpg"] for i,link in enumerate(links)]
-            download_multiple(URLS_PATHS)            
-            sleep(0.5)
+            URLS_PATHS_TOT.extend(URLS_PATHS)
+
+            if not conta:
+                download_multiple(URLS_PATHS_TOT)
+                
+                URLS_PATHS_TOT=[]
+
+            conta=(conta+1)%2
     
 
 if __name__ == "__main__":
     idManga='d86cf65b-5f6c-437d-a0af-19a31f94ec55'
     manga=Manga(idManga,'it')
-    # print(manga)
-    #print(manga.capitoli)
-    print(manga.volumes)
+    print(manga)
     manga.save()
