@@ -6,10 +6,9 @@ import os
 import requests
 from time import sleep
 import concurrent.futures
-import urllib.request
 import zipfile
 import pathlib
-
+import time
 
 from concurrent.futures import as_completed
 
@@ -24,7 +23,7 @@ def download(url, path, force=False):
         img_data = requests.get(url).content
         with open(path, 'wb') as handler:
             handler.write(img_data)
-        return 1
+        return len(img_data)
     return 0
 
 
@@ -45,6 +44,7 @@ def download_for_multiple(url, path, force=False):
 
 
 def download_multiple(urls_paths, force=False):
+    conta=0
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         futures = [executor.submit(
             download_for_multiple, url_path[0], url_path[1]) for url_path in urls_paths]
@@ -52,10 +52,12 @@ def download_multiple(urls_paths, force=False):
             # retrieve result
             res, path = future.result()
             # check for a link that was skipped
+            conta=conta+res
             """if res :
                 print(f'Downloaded')
             else:
                 print(f'>skipped {path}')"""
+    return conta
 
 
 def downloadCover(covers, volume, path):
@@ -194,7 +196,9 @@ class Manga:
 
         coverss=api.get_coverart_list(manga=self.idManga, limit=100)
         covers=getcovers(coverss, self.cover_locale)
-
+        sizo=0
+        start = 0
+        end = 0
         for i, mangach in enumerate(f):
 
             volume=mangach.volume
@@ -205,22 +209,24 @@ class Manga:
             downloadCover(covers, volume, coverPath, )
 
             chapter=mangach.chapter
-            path=path +f"/{chapter}"
+            path=path +f"/{chapter:05}"
             createDir(path)
 
-            loading(i /len(f), f'Downloading {volume}-{chapter}')
+            loading(i /len(f), f'Downloading {volume}-{chapter}  {sizo/(1024*max(end - start,1))}Kb/s')
 
             links=mangach.fetch_chapter_images()
             #print(links)
+            start = time.time()
             URLS_PATHS=[[link, f"{path}/{i:05}.{getFormat(link)}"]
                         for i, link in enumerate(links)]
-            download_multiple(URLS_PATHS)
+            end = time.time()
+            sizo=download_multiple(URLS_PATHS)
             #sleep(0.5)
 
 
 if __name__ == "__main__":
-    #idManga='d86cf65b-5f6c-437d-a0af-19a31f94ec55'
-    idManga='c0ad8919-4646-4a61-adf9-0fd6d8612efa'
+    idManga='d86cf65b-5f6c-437d-a0af-19a31f94ec55'
+    #idManga='c0ad8919-4646-4a61-adf9-0fd6d8612efa'
     manga=Manga(idManga, 'en', 'ja')
     print(manga.title)
 
