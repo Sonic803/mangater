@@ -28,10 +28,14 @@ def download(url, path, force=False):
     return 0
 
 
-def getcovers(coverss, extension='.jpg'):
+def getcovers(coverss, cover_locale='en'):
     covers={}
+    id=''
     for a in coverss:
-        if a.fileName.find(extension)!=-1:
+        if a.volume in covers:
+            if a.locale==cover_locale:
+                covers[a.volume]=a
+        else:
             covers[a.volume]=a
     return covers
 
@@ -54,11 +58,11 @@ def download_multiple(urls_paths, force=False):
                 print(f'>skipped {path}')"""
 
 
-def downloadCover(covers, volume, path, CoverFormat):
+def downloadCover(covers, volume, path):
     if volume in covers:
         url = covers[volume].fetch_cover_image()
         createDir(path)
-        download(url, f"{path}/cover{CoverFormat}", force=True)
+        download(url, f"{path}/cover.{getFormat(url)}", force=True)
         return 1
     return 0
 
@@ -77,21 +81,22 @@ def writeFile(path, stringa):
 
 
 class Manga:
-    def __init__(self, idManga, language='en', CoverFormat='jpg'):
+    def __init__(self, idManga, language='en', cover_locale='en'):
         self.language=language
         self.idManga=idManga
         self.manga=api.view_manga_by_id(manga_id=self.idManga)
 
+        self.cover_locale=cover_locale
+
         self.volumes=api.get_manga_volumes_and_chapters(
             manga_id=idManga, limit=300, translatedLanguage=self.language)  # API limita a 300 volumi
-        self.coverId=self.manga.coverId
-        self.CoverFormat=CoverFormat
+        self.coverId=self.manga.manga_id
         self.title=list(self.manga.title.values())[0]
         self.basePath=f'./{self.title}'
 
         self.description=self.manga.description
-        self.authorId=self.manga.authorId[0]
-        self.artistId=self.manga.artistId[0]
+        self.authorId=self.manga.author_id[0]
+        self.artistId=self.manga.author_id[0]
         self.genres=self.manga.publicationDemographic
         self.status=self.manga.status
         self.year=self.manga.year
@@ -106,7 +111,7 @@ class Manga:
         self.capitoli=[list(a.values())[0] for a in list(self.volumi)]
         capitoli=[a['chapters'] for a in self.volumi]
 
-        self.groups=[a.scanlation_group_id for a in self.chapters]
+        self.groups=[a.group_id for a in self.chapters]
 
         self.groupsNum={}
         for a in self.groups:
@@ -145,7 +150,7 @@ class Manga:
             print("ciao",pathImages)
             directory = pathlib.Path(pathImages)
             print(i)
-            with zipfile.ZipFile(f"{pathOutput}/{self.title}-{i}.cbz", mode="w") as archive:
+            with zipfile.ZipFile(f"{pathOutput}/{self.title} {i}.cbz", mode="w") as archive:
                 for file_path in directory.rglob("*"):
                     print(file_path)
                     archive.write(
@@ -175,8 +180,8 @@ class Manga:
         for a in chapt:
             indice=a.chapter
             if a.chapter in vett:
-                vecchio=vett[indice].scanlation_group_id
-                nuovo=a.scanlation_group_id
+                vecchio=vett[indice].group_id
+                nuovo=a.group_id
                 if self.groupsNum[vecchio]<self.groupsNum[nuovo]:
                     vett[indice]=a
             else:
@@ -188,7 +193,7 @@ class Manga:
             f.append(vett[a])
 
         coverss=api.get_coverart_list(manga=self.idManga, limit=100)
-        covers=getcovers(coverss, self.CoverFormat)
+        covers=getcovers(coverss, self.cover_locale)
 
         for i, mangach in enumerate(f):
 
@@ -197,7 +202,7 @@ class Manga:
             createDir(path)
 
             coverPath=f"{path}/\"0cover"
-            downloadCover(covers, volume, coverPath, self.CoverFormat)
+            downloadCover(covers, volume, coverPath, )
 
             chapter=mangach.chapter
             path=path +f"/{chapter}"
@@ -210,12 +215,13 @@ class Manga:
             URLS_PATHS=[[link, f"{path}/{i:05}.{getFormat(link)}"]
                         for i, link in enumerate(links)]
             download_multiple(URLS_PATHS)
-            sleep(0.5)
+            #sleep(0.5)
 
 
 if __name__ == "__main__":
-    idManga='d86cf65b-5f6c-437d-a0af-19a31f94ec55'
-    manga=Manga(idManga, 'en', '.png')
+    #idManga='d86cf65b-5f6c-437d-a0af-19a31f94ec55'
+    idManga='c0ad8919-4646-4a61-adf9-0fd6d8612efa'
+    manga=Manga(idManga, 'en', 'ja')
     print(manga.title)
 
     manga.save()
