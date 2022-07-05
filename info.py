@@ -7,6 +7,8 @@ import requests
 from time import sleep
 import concurrent.futures
 import urllib.request
+import zipfile
+import pathlib
 
 
 from concurrent.futures import as_completed
@@ -68,6 +70,11 @@ def createDir(path):
     return 0
 
 
+def writeFile(path, stringa):
+    with open(path, "w") as text_file:
+        n = text_file.write(stringa)
+
+
 class Manga:
     def __init__(self, idManga, language='en', CoverFormat='jpg'):
         self.language=language
@@ -79,9 +86,11 @@ class Manga:
         self.coverId=self.manga.coverId
         self.CoverFormat=CoverFormat
         self.title=list(self.manga.title.values())[0]
+        self.basePath=f'./{self.title}'
+
         self.description=self.manga.description
-        self.authorId=self.manga.authorId
-        self.artistId=self.manga.artistId
+        self.authorId=self.manga.authorId[0]
+        self.artistId=self.manga.artistId[0]
         self.genres=self.manga.publicationDemographic
         self.status=self.manga.status
         self.year=self.manga.year
@@ -109,14 +118,50 @@ class Manga:
         return f"{self.manga}"
         # return f"{self.volumes}"
 
+    def metadata(self, volume):
+        return f"""<?xml version='1.0' encoding='utf-8'?>
+<ComicInfo>
+<Title>{self.title} {volume}</Title>
+<Series>{self.title}</Series>
+<Number>{volume}</Number>
+<Writer>{api.get_author_by_id(author_id=self.authorId).name}</Writer>
+<LanguageISO>{self.language}</LanguageISO>
+<Manga>Yes</Manga>
+</ComicInfo>"""
+
+    def cbz(self):
+        folder=self.basePath
+        subfolders = [f.name for f in os.scandir(folder) if f.is_dir()]
+        for i in subfolders:
+            pathMetadata=f"{folder}/ComicInfo.xml"
+            pathImages=f"{folder}/{i}"
+            writeFile(pathMetadata, self.metadata(i))
+            #print(self.metadata(i))
+            print(pathImages)
+            directory = pathlib.Path(pathImages)
+
+            with zipfile.ZipFile(f"{self.title} {i}.cbz", mode="w") as archive:
+                for file_path in directory.rglob("*"):
+                    archive.write(
+                        file_path,
+                        arcname=file_path.relative_to(folder)
+
+                    )
+                print(pathMetadata)
+                archive.write(
+                    pathMetadata,
+                    arcname="ComicInfo.xml"
+
+                )
+
     def save(self):
         k=0
         chapt=[]
         cha=api.chapter_list(
-                manga=self.idManga, translatedLanguage=self.language, limit=100, offset=100 *k)
+            manga=self.idManga, translatedLanguage=self.language, limit=100, offset=100 *k)
         while len(cha)>0:
             chapt.extend(cha)
-            k=k+1
+            k=k +1
             cha=api.chapter_list(
                 manga=self.idManga, translatedLanguage=self.language, limit=100, offset=100 *k)
 
@@ -164,3 +209,5 @@ if __name__ == "__main__":
     manga=Manga(idManga, 'en', '.png')
     print(manga.title)
     manga.save()
+    manga.cbz()
+
