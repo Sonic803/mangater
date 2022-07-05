@@ -131,20 +131,25 @@ class Manga:
 
     def cbz(self):
         folder=self.basePath
-        subfolders = [f.name for f in os.scandir(folder) if f.is_dir()]
+        subfolders = [f.name for f in os.scandir(f"{folder}/images") if f.is_dir()]
         for i in subfolders:
-            pathMetadata=f"{folder}/ComicInfo.xml"
-            pathImages=f"{folder}/{i}"
-            writeFile(pathMetadata, self.metadata(i))
-            #print(self.metadata(i))
-            print(pathImages)
-            directory = pathlib.Path(pathImages)
+            pathIm=f"{folder}/images"
+            pathMetadata=f"{pathIm}/ComicInfo.xml"
+            pathImages=f"{pathIm}/{i}"
+            pathOutput=f"{folder}/out"
+            createDir(pathOutput)
 
-            with zipfile.ZipFile(f"{self.title} {i}.cbz", mode="w") as archive:
+            writeFile(pathMetadata, self.metadata(i))
+            # print(self.metadata(i))
+            print("ciao",pathImages)
+            directory = pathlib.Path(pathImages)
+            print(i)
+            with zipfile.ZipFile(f"{pathOutput}/{self.title}-{i}.cbz", mode="w") as archive:
                 for file_path in directory.rglob("*"):
+                    print(file_path)
                     archive.write(
                         file_path,
-                        arcname=file_path.relative_to(folder)
+                        arcname=file_path.relative_to(pathIm)
 
                     )
                 print(pathMetadata)
@@ -187,8 +192,9 @@ class Manga:
         for i, mangach in enumerate(f):
 
             volume=mangach.volume
-            path = f'./{self.title}/{volume}'
+            path = f'./{self.title}/images/{volume}'
             createDir(path)
+
             coverPath=f"{path}/\"0cover"
             downloadCover(covers, volume, coverPath, self.CoverFormat)
 
@@ -202,12 +208,14 @@ class Manga:
             URLS_PATHS=[[link, f"{path}/{i}.jpg"]
                         for i, link in enumerate(links)]
             download_multiple(URLS_PATHS)
+            sleep(0.5)
 
 
 if __name__ == "__main__":
     idManga='d86cf65b-5f6c-437d-a0af-19a31f94ec55'
     manga=Manga(idManga, 'en', '.png')
     print(manga.title)
+
     manga.save()
     manga.cbz()
 
