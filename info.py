@@ -68,7 +68,8 @@ def createDir(path):
         os.makedirs(path)
         return 1
     return 0
-
+def getFormat(link):
+    return link.split(".")[-1]
 
 def writeFile(path, stringa):
     with open(path, "w") as text_file:
@@ -205,7 +206,8 @@ class Manga:
             loading(i /len(f), f'Downloading {volume}-{chapter}')
 
             links=mangach.fetch_chapter_images()
-            URLS_PATHS=[[link, f"{path}/{i}.jpg"]
+            #print(links)
+            URLS_PATHS=[[link, f"{path}/{i:05}.{getFormat(link)}"]
                         for i, link in enumerate(links)]
             download_multiple(URLS_PATHS)
             sleep(0.5)
