@@ -15,8 +15,6 @@ from concurrent.futures import as_completed
 
 api = mangadex.Api()
 
-# Download url to path if not exists
-
 
 def download(url, path, force=False):
     if not os.path.exists(path) or force:
@@ -38,7 +36,11 @@ def getcovers(coverss, cover_locale='en'):
             covers[a.volume]=a
     return covers
 
-
+def numero(volume):
+    if volume=='None':
+        return 0
+    else:
+        return volume
 def download_for_multiple(url, path, force=False):
     return (download(url, path, force), path)
 
@@ -131,7 +133,7 @@ class Manga:
 <ComicInfo>
 <Title>{self.title} {volume}</Title>
 <Series>{self.title}</Series>
-<Number>{volume}</Number>
+<Number>{numero(volume)}</Number>
 <Writer>{api.get_author_by_id(author_id=self.authorId).name}</Writer>
 <LanguageISO>{self.language}</LanguageISO>
 <Manga>Yes</Manga>
