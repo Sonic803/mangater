@@ -69,7 +69,7 @@ class Manga:
     def setup(self,idManga=None):
         if idManga is None:
             idManga=input("ID Manga: ")
-        
+        self.idManga=idManga
         self.manga=api.view_manga_by_id(manga_id=idManga)
         self.title=list(self.manga.title.values())[0]
         print(self.title)
@@ -81,12 +81,31 @@ class Manga:
         if language not in langagues:
             raise Exception("Language not found")
         print()
+        self.language=language
         covers=getCovers(api,idManga)
         locales=getLocales(api,covers)
         print(locales)
         locale=input("Cover locale: ")
         if locale not in locales:
             raise Exception("Cover locale not found")
+        
+        self.setGroups()
+        tuttiCapitoliLingua=getChapters(api,idManga,language,self.groupsNum)
+
+        groupsNamesById=getGroupsNamesById(api,tuttiCapitoliLingua)
+        # Lista di capitoli
+        capitoli=[(a.chapter,a.group_id) for a in tuttiCapitoliLingua]
+
+        capitoli=sorted(capitoli,key=lambda x: x[0])
+
+        #Give a color to every element of groupsNamesById
+        groupsColor={group_id: randomColor() for group_id in list(groupsNamesById)}
+
+        for a in list(groupsColor):
+            print(color(groupsNamesById[a],groupsColor[a]),end=' ')
+        
+        for a in capitoli:
+            print(color(a[0],groupsColor[a[1]]),end=' ')
         
         self.__init__(idManga,language,locale)
 

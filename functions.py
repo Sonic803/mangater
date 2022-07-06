@@ -5,6 +5,7 @@ import requests
 import concurrent.futures
 from functions import *
 import mangadex
+import random
 
 from concurrent.futures import as_completed
 
@@ -155,3 +156,17 @@ def possibleLanguages(capitoli):
         if a.translatedLanguage not in languages:
             languages.append(a.translatedLanguage)
     return languages
+
+def getGroupName(api, group_id):
+    return api.scanlation_group_list(group_ids=group_id)[0].name
+    
+def getGroupsNamesById(api, chapters):
+    groups=[]
+    for a in chapters:
+        if a.group_id not in groups:
+            groups.append(a.group_id)
+    return {group_id: getGroupName(api,group_id) for group_id in groups}
+
+def randomColor():
+    #array of 3 random numbers between 0 and 255
+    return [random.randint(0,255) for i in range(3)]
