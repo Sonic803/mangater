@@ -1,91 +1,16 @@
-from tokenize import group
 import mangadex
-import json
 from libra import *
 import os
-import requests
-from time import sleep
-import concurrent.futures
 import zipfile
 import pathlib
 import time
-
-from concurrent.futures import as_completed
-
+from functions import *
 
 api = mangadex.Api()
 
 
-def download(url, path, force=False):
-    if not os.path.exists(path) or force:
-        img_data = requests.get(url).content
-        with open(path, 'wb') as handler:
-            handler.write(img_data)
-        return len(img_data)
-    return 0
-
-
-def getcovers(coverss, cover_locale='en'):
-    covers={}
-    id=''
-    for a in coverss:
-        if a.volume in covers:
-            if a.locale==cover_locale:
-                covers[a.volume]=a
-        else:
-            covers[a.volume]=a
-    return covers
-
-def numero(volume):
-    if volume=='None':
-        return 0
-    else:
-        return volume
-def download_for_multiple(url, path, force=False):
-    return (download(url, path, force), path)
-
-
-def download_multiple(urls_paths, force=False):
-    conta=0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
-        futures = [executor.submit(
-            download_for_multiple, url_path[0], url_path[1]) for url_path in urls_paths]
-        for future in as_completed(futures):
-            # retrieve result
-            res, path = future.result()
-            # check for a link that was skipped
-            conta=conta+res
-            """if res :
-                print(f'Downloaded')
-            else:
-                print(f'>skipped {path}')"""
-    return conta
-
-
-def downloadCover(covers, volume, path):
-    if volume in covers:
-        url = covers[volume].fetch_cover_image()
-        createDir(path)
-        download(url, f"{path}/cover.{getFormat(url)}", force=True)
-        return 1
-    return 0
-
-
-def createDir(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
-        return 1
-    return 0
-def getFormat(link):
-    return link.split(".")[-1]
-
-def writeFile(path, stringa):
-    with open(path, "w") as text_file:
-        n = text_file.write(stringa)
-
-
 class Manga:
-    def __init__(self, idManga, language='en', cover_locale='en'):
+    def __init__(self, idManga, language='en', cover_locale=None,path='./'):
         self.language=language
         self.idManga=idManga
         self.manga=api.view_manga_by_id(manga_id=self.idManga)
@@ -96,7 +21,7 @@ class Manga:
             manga_id=idManga, limit=300, translatedLanguage=self.language)  # API limita a 300 volumi
         self.coverId=self.manga.manga_id
         self.title=list(self.manga.title.values())[0]
-        self.basePath=f'./{self.title}'
+        self.basePath=f'{path}/{self.title}'
 
         self.description=self.manga.description
         self.authorId=self.manga.author_id[0]
@@ -131,7 +56,7 @@ class Manga:
     def metadata(self, volume):
         return f"""<?xml version='1.0' encoding='utf-8'?>
 <ComicInfo>
-<Title>{self.title} {volume}</Title>
+<Title>{self.title} {numero(volume,' Extra')}</Title>
 <Series>{self.title}</Series>
 <Number>{numero(volume)}</Number>
 <Writer>{api.get_author_by_id(author_id=self.authorId).name}</Writer>
@@ -141,28 +66,25 @@ class Manga:
 
     def cbz(self):
         folder=self.basePath
-        subfolders = [f.name for f in os.scandir(f"{folder}/images") if f.is_dir()]
+        subfolders = [f.name for f in os.scandir(
+            f"{folder}/images") if f.is_dir()]
         for i in subfolders:
             pathIm=f"{folder}/images"
             pathMetadata=f"{pathIm}/ComicInfo.xml"
             pathImages=f"{pathIm}/{i}"
             pathOutput=f"{folder}/out"
             createDir(pathOutput)
+            printo(f"Creating {pathOutput}/{self.title} {numero(i,' Extra')}.cbz")
 
             writeFile(pathMetadata, self.metadata(i))
-            # print(self.metadata(i))
-            print("ciao",pathImages)
             directory = pathlib.Path(pathImages)
-            print(i)
-            with zipfile.ZipFile(f"{pathOutput}/{self.title} {i}.cbz", mode="w") as archive:
+            with zipfile.ZipFile(f"{pathOutput}/{self.title} {numero(i,' Extra')}.cbz", mode="w") as archive:
                 for file_path in directory.rglob("*"):
-                    print(file_path)
                     archive.write(
                         file_path,
                         arcname=file_path.relative_to(pathIm)
 
                     )
-                print(pathMetadata)
                 archive.write(
                     pathMetadata,
                     arcname="ComicInfo.xml"
@@ -204,34 +126,36 @@ class Manga:
         for i, mangach in enumerate(f):
 
             volume=mangach.volume
-            path = f'./{self.title}/images/{volume}'
+            path = f'{self.basePath}/images/{volume}'
             createDir(path)
 
-            coverPath=f"{path}/\"0cover"
+            coverPath=f"{path}"
             downloadCover(covers, volume, coverPath, )
 
             chapter=mangach.chapter
             path=path +f"/{chapter:05}"
             createDir(path)
 
-            loading(i /len(f), f'Downloading {volume}-{chapter}  {sizo/(1024*max(end - start,1))}Kb/s')
+            loading(
+                i /len(f), f'Downloading {volume}-{chapter} {"{:.0f}".format(sizo/(1024*max(end - start,1)))}Kb/s    ')
 
             links=mangach.fetch_chapter_images()
-            #print(links)
+            # print(links)
             start = time.time()
             URLS_PATHS=[[link, f"{path}/{i:05}.{getFormat(link)}"]
                         for i, link in enumerate(links)]
             end = time.time()
             sizo=download_multiple(URLS_PATHS)
-            #sleep(0.5)
+            # sleep(0.5)
 
 
 if __name__ == "__main__":
     idManga='d86cf65b-5f6c-437d-a0af-19a31f94ec55'
-    #idManga='c0ad8919-4646-4a61-adf9-0fd6d8612efa'
-    manga=Manga(idManga, 'en', 'ja')
+    # idManga='c0ad8919-4646-4a61-adf9-0fd6d8612efa'
+    manga=Manga(idManga, 'en', 'ja','./Libri')
     print(manga.title)
 
-    manga.save()
+
     manga.cbz()
+    manga.save()
 
