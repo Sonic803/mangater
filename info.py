@@ -5,157 +5,207 @@ import zipfile
 import pathlib
 import time
 from functions import *
+from inspect import cleandoc
+
 
 api = mangadex.Api()
 
 
 class Manga:
-    def __init__(self, idManga, language='en', cover_locale=None,path='./'):
-        self.language=language
-        self.idManga=idManga
-        self.manga=api.view_manga_by_id(manga_id=self.idManga)
 
-        self.cover_locale=cover_locale
+    def __str__(self):
+        return f"{self.manga}"
 
-        self.volumes=api.get_manga_volumes_and_chapters(
-            manga_id=idManga, limit=300, translatedLanguage=self.language)  # API limita a 300 volumi
-        self.coverId=self.manga.manga_id
-        self.title=list(self.manga.title.values())[0]
-        self.basePath=f'{path}/{self.title}'
+    
+    def setGroups(self):
+        tuttiCapitoli=getAllChapters(api,self.idManga,self.language)
 
-        self.description=self.manga.description
-        self.authorId=self.manga.author_id[0]
-        self.artistId=self.manga.author_id[0]
-        self.genres=self.manga.publicationDemographic
-        self.status=self.manga.status
-        self.year=self.manga.year
-        self.chapters=[]
-        for i in range(10):
-            self.chapters.extend(api.manga_feed(
-                manga_id=idManga, limit=100, offset=100 *i, translatedLanguage=self.language))
+        # Lista di id di gruppi con ripetizioni se hanno fatto più capitoli
+        gruppi=[a.group_id for a in tuttiCapitoli]
 
-        # self.chapters=api.chapter_list(manga=idManga,limit=3)
-
-        self.volumi=list(self.volumes.values())
-        self.capitoli=[list(a.values())[0] for a in list(self.volumi)]
-        capitoli=[a['chapters'] for a in self.volumi]
-
-        self.groups=[a.group_id for a in self.chapters]
-
+        # Dizionario con frequenze dei gruppi
         self.groupsNum={}
-        for a in self.groups:
+        for a in gruppi:
             if (a in self.groupsNum):
                 self.groupsNum[a] += 1
             else:
                 self.groupsNum[a] = 1
 
-    def __str__(self):
-        return f"{self.manga}"
-        # return f"{self.volumes}"
+    def getAllChapters(api,manga_id,translatedLanguage=None):
+        tuttiCapitoli=[]
+        alcuniCapitoli=api.manga_feed(
+                manga_id=manga_id, limit=100, offset=100 *i, translatedLanguage=translatedLanguage)
+        while len(alcuniCapitoli)> 0:
+            alcuniCapitoli.extend(alcuniCapitoli)
+            alcuniCapitoli=api.manga_feed(
+                manga_id=manga_id, limit=100, offset=100 *i, translatedLanguage=translatedLanguage)
+        return tuttiCapitoli
 
-    def metadata(self, volume):
-        return f"""<?xml version='1.0' encoding='utf-8'?>
-<ComicInfo>
-<Title>{self.title} {numero(volume,' Extra')}</Title>
-<Series>{self.title}</Series>
-<Number>{numero(volume)}</Number>
-<Writer>{api.get_author_by_id(author_id=self.authorId).name}</Writer>
-<LanguageISO>{self.language}</LanguageISO>
-<Manga>Yes</Manga>
-</ComicInfo>"""
+
+    def __init__(self, idManga=None, language='en', cover_locale=None, path='./Libri'):
+        if idManga is None:
+            return
+        self.language=language
+        self.idManga=idManga
+        self.cover_locale=cover_locale
+
+        self.manga=api.view_manga_by_id(manga_id=self.idManga)
+
+        # Dizionario con {1 : {'volume': 1 , 'count' : 6 , chapters : {...} }, ...}
+        self.volumes=api.get_manga_volumes_and_chapters(
+            manga_id=idManga, limit=300, translatedLanguage=self.language)  # API limita a 300 volumi
+
+        self.title=list(self.manga.title.values())[0]
+        self.basePath=f'{path}'
+        self.path=f'{path}/{self.title}'
+
+        self.coverId=self.manga.manga_id
+
+        self.authorId=self.manga.author_id[0]
+        self.author=api.get_author_by_id(author_id=self.authorId).name
+
+        self.setGroups()
+    
+    def setup(self,idManga=None):
+        if idManga is None:
+            idManga=input("ID Manga: ")
+        
+        self.manga=api.view_manga_by_id(manga_id=idManga)
+        self.title=list(self.manga.title.values())[0]
+        print(self.title)
+        #print(self.manga)
+        tuttiCapitoli=getAllChapters(api,idManga)
+        langagues=possibleLanguages(tuttiCapitoli)
+        print(langagues)
+        language=input("Language: ")
+        if language not in langagues:
+            raise Exception("Language not found")
+        print()
+        covers=getCovers(api,idManga)
+        locales=getLocales(api,covers)
+        print(locales)
+        locale=input("Cover locale: ")
+        if locale not in locales:
+            raise Exception("Cover locale not found")
+        
+        self.__init__(idManga,language,locale)
+
+
+
+
+    def metadata(self, volume, a=None):
+        if a is None:
+            a=self.volume
+
+        return cleandoc(f"""
+            <?xml version='1.0' encoding='utf-8'?>
+            <ComicInfo>
+            <Title>{self.title} {numero(volume,' Extra')}</Title>
+            <Series>{self.title}</Series>
+            <Number>{numero(a)}</Number>
+            <Writer>{self.author}</Writer>
+            <LanguageISO>{self.language}</LanguageISO>
+            <Manga>Yes</Manga>
+            </ComicInfo>"""
+                        )
 
     def cbz(self):
-        folder=self.basePath
+        folder=self.path
         subfolders = [f.name for f in os.scandir(
             f"{folder}/images") if f.is_dir()]
-        for i in subfolders:
-            pathIm=f"{folder}/images"
-            pathMetadata=f"{pathIm}/ComicInfo.xml"
-            pathImages=f"{pathIm}/{i}"
-            pathOutput=f"{folder}/out"
-            createDir(pathOutput)
-            printo(f"Creating {pathOutput}/{self.title} {numero(i,' Extra')}.cbz")
 
-            writeFile(pathMetadata, self.metadata(i))
-            directory = pathlib.Path(pathImages)
-            with zipfile.ZipFile(f"{pathOutput}/{self.title} {numero(i,' Extra')}.cbz", mode="w") as archive:
+        cartelle=[int(a) for a in subfolders if a.isdigit()]
+
+        # Number of the volume made from chapters not in any volume
+        if len(cartelle)>0:
+            extraVolume=max(cartelle) +1
+        else:
+            extraVolume=1
+
+        for i in subfolders:
+            pathImages=f"{folder}/images"
+            pathMetadata=f"{pathImages}/ComicInfo.xml"
+            pathCurrentVolume=f"{pathImages}/{i}"
+            pathOutput=f"{folder}/out"
+
+            createDir(pathOutput)
+
+            printo(
+                f"Creating {pathOutput}/{self.title} {numero(i,' Extra')}.cbz")
+
+            metadata=self.metadata(i, realVolume(i, extraVolume))
+
+            writeFile(pathMetadata, metadata)
+
+            directory = pathlib.Path(pathCurrentVolume)
+
+            pathCbz=f"{pathOutput}/{self.title} {numero(i,' Extra')}.cbz"
+
+            with zipfile.ZipFile(pathCbz, mode="w") as archive:
                 for file_path in directory.rglob("*"):
                     archive.write(
                         file_path,
-                        arcname=file_path.relative_to(pathIm)
-
+                        arcname=file_path.relative_to(pathImages)
                     )
+
                 archive.write(
                     pathMetadata,
                     arcname="ComicInfo.xml"
-
                 )
 
-    def save(self):
-        k=0
-        chapt=[]
-        cha=api.chapter_list(
-            manga=self.idManga, translatedLanguage=self.language, limit=100, offset=100 *k)
-        while len(cha)>0:
-            chapt.extend(cha)
-            k=k +1
-            cha=api.chapter_list(
-                manga=self.idManga, translatedLanguage=self.language, limit=100, offset=100 *k)
+    def save(self,whichVolumes=None):
 
-        vett={}
-        for a in chapt:
-            indice=a.chapter
-            if a.chapter in vett:
-                vecchio=vett[indice].group_id
-                nuovo=a.group_id
-                if self.groupsNum[vecchio]<self.groupsNum[nuovo]:
-                    vett[indice]=a
-            else:
-                vett[indice]=a
 
-        e=sorted(list(vett))
-        f=[]
-        for a in e:
-            f.append(vett[a])
+        chapters=getChapters(api,self.idManga,self.language,self.groupsNum)
 
-        coverss=api.get_coverart_list(manga=self.idManga, limit=100)
-        covers=getcovers(coverss, self.cover_locale)
-        sizo=0
+        covers=api.get_coverart_list(manga=self.idManga, limit=100)
+
+        cover=getCorrectCovers(covers, self.cover_locale)
+
+        sizeDownloaded=0
         start = 0
         end = 0
-        for i, mangach in enumerate(f):
+        incremento=0
+        for i, chapter in enumerate(chapters):
 
-            volume=mangach.volume
-            path = f'{self.basePath}/images/{volume}'
+            volume=chapter.volume
+            whichVolumes=[str(a) for a in whichVolumes]
+            if whichVolumes is not None:
+                if volume not in whichVolumes:
+                    continue
+
+            path = f'{self.path}/images/{volume}'            
             createDir(path)
 
             coverPath=f"{path}"
-            downloadCover(covers, volume, coverPath, )
+            downloadCover(cover, volume, coverPath, )
 
-            chapter=mangach.chapter
-            path=path +f"/{chapter:05}"
+            chapterNumber=chapter.chapter
+            path=path +f"/{chapterNumber:05}"
             createDir(path)
 
             loading(
-                i /len(f), f'Downloading {volume}-{chapter} {"{:.0f}".format(sizo/(1024*max(end - start,1)))}Kb/s    ')
+                i /len(chapters), f'Downloading {volume}-{chapterNumber} {bites(sizeDownloaded/(max(end - start,1)))}/s')
 
-            links=mangach.fetch_chapter_images()
+            links=chapter.fetch_chapter_images()
             # print(links)
             start = time.time()
-            URLS_PATHS=[[link, f"{path}/{i:05}.{getFormat(link)}"]
+            URLS_PATHS=[[link, f"{path}/{(incremento+i):05}.{getFormat(link)}"]
                         for i, link in enumerate(links)]
+            incremento=incremento+len(links)
             end = time.time()
-            sizo=download_multiple(URLS_PATHS)
+            sizeDownloaded=download_multiple(URLS_PATHS)
             # sleep(0.5)
 
 
 if __name__ == "__main__":
-    idManga='d86cf65b-5f6c-437d-a0af-19a31f94ec55'
+    #idManga='d86cf65b-5f6c-437d-a0af-19a31f94ec55'
+    idManga='0951feea-ba41-4ad0-9cb0-edadc77eae73'
     # idManga='c0ad8919-4646-4a61-adf9-0fd6d8612efa'
-    manga=Manga(idManga, 'en', 'ja','./Libri')
+    #manga=Manga(idManga, 'en', 'ja', './///Libri')
+    manga=Manga()
+    manga.setup()
     print(manga.title)
 
-
+    manga.save([1])
     manga.cbz()
-    manga.save()
-
