@@ -101,9 +101,12 @@ class Manga:
         #Give a color to every element of groupsNamesById
         groupsColor={group_id: randomColor() for group_id in list(groupsNamesById)}
 
-        for a in list(groupsColor):
-            print(color(groupsNamesById[a],groupsColor[a]),end=' ')
-        
+        groupsCount=[(group_id,[a[1] for a in capitoli].count(group_id)) for group_id in list(groupsNamesById)]
+
+        groupsCount=sorted(groupsCount,key=lambda x: x[1],reverse=True)
+        for a in groupsCount:
+            print(color(groupsNamesById[a[0]]+" "+str(a[1]),groupsColor[a[0]]),end=', ')
+        print()
         for a in capitoli:
             print(color(a[0],groupsColor[a[1]]),end=' ')
         
