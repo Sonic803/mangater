@@ -15,8 +15,10 @@ def download(url, path, force=False):
         return len(img_data)
     return 0
 
+
 def getCovers(api, idManga):
     return api.get_coverart_list(manga=idManga, limit=100)
+
 
 def getLocales(api, covers):
     locales=[]
@@ -24,6 +26,7 @@ def getLocales(api, covers):
         if a.locale not in locales:
             locales.append(a.locale)
     return locales
+
 
 def getCorrectCovers(coverss, cover_locale=None):
     covers={}
@@ -144,8 +147,9 @@ def getAllChapters(api, manga_id, translatedLanguage=None):
                 manga=manga_id, translatedLanguage=translatedLanguage, limit=100, offset=100 *offset)
         capitoli.extend(pochiCapitoli)
         offset=offset +1
-        
+
     return capitoli
+
 
 def possibleLanguages(capitoli):
     languages=[]
@@ -154,20 +158,24 @@ def possibleLanguages(capitoli):
             languages.append(a.translatedLanguage)
     return languages
 
+
 def getGroupName(api, group_id):
     return api.scanlation_group_list(group_ids=group_id)[0].name
-    
+
+
 def getGroupsNamesById(api, chapters):
     groups=[]
     for a in chapters:
         if a.group_id not in groups:
             groups.append(a.group_id)
-    return {group_id: getGroupName(api,group_id) for group_id in groups}
+    return {group_id: getGroupName(api, group_id) for group_id in groups}
+
 
 def randomColor():
-    #array of 3 random numbers between 0 and 255
+    # array of 3 random numbers between 0 and 255
     return randomVividColor()
 
-def getRainbowColor(i,n):
-    #array of 3 random numbers between 0 and 255
-    return hsv_to_rgb(i/n,1.,1.)
+
+def getRainbowColor(i, n):
+    # array of 3 random numbers between 0 and 255
+    return hsv_to_rgb(i /n, 1., 1.)

@@ -16,9 +16,8 @@ class Manga:
     def __str__(self):
         return f"{self.manga}"
 
-    
     def setGroups(self):
-        tuttiCapitoli=getAllChapters(api,self.idManga,self.language)
+        tuttiCapitoli=getAllChapters(api, self.idManga, self.language)
 
         # Lista di id di gruppi con ripetizioni se hanno fatto più capitoli
         gruppi=[a.group_id for a in tuttiCapitoli]
@@ -31,16 +30,15 @@ class Manga:
             else:
                 self.groupsNum[a] = 1
 
-    def getAllChapters(api,manga_id,translatedLanguage=None):
+    def getAllChapters(api, manga_id, translatedLanguage=None):
         tuttiCapitoli=[]
         alcuniCapitoli=api.manga_feed(
-                manga_id=manga_id, limit=100, offset=100 *i, translatedLanguage=translatedLanguage)
+            manga_id=manga_id, limit=100, offset=100 *i, translatedLanguage=translatedLanguage)
         while len(alcuniCapitoli)> 0:
             alcuniCapitoli.extend(alcuniCapitoli)
             alcuniCapitoli=api.manga_feed(
                 manga_id=manga_id, limit=100, offset=100 *i, translatedLanguage=translatedLanguage)
         return tuttiCapitoli
-
 
     def __init__(self, idManga=None, language='en', cover_locale=None, path='./Libri'):
         if idManga is None:
@@ -65,8 +63,8 @@ class Manga:
         self.author=api.get_author_by_id(author_id=self.authorId).name
 
         self.setGroups()
-    
-    def setup(self,idManga=None):
+
+    def setup(self, idManga=None):
         if idManga is None:
             idManga=input("ID Manga: ")
         self.idManga=idManga
@@ -75,7 +73,7 @@ class Manga:
         print(self.title)
 
         printo("Searching for chapters...")
-        tuttiCapitoli=getAllChapters(api,idManga)
+        tuttiCapitoli=getAllChapters(api, idManga)
 
         deleteLastLine()
         langagues=possibleLanguages(tuttiCapitoli)
@@ -85,61 +83,65 @@ class Manga:
             raise Exception("Language not found")
         print()
         self.language=language
-        covers=getCovers(api,idManga)
-        locales=getLocales(api,covers)
+        covers=getCovers(api, idManga)
+        locales=getLocales(api, covers)
         print(locales)
         locale=input("Cover locale: ")
         if locale not in locales:
             raise Exception("Cover locale not found")
-        
+
         printo("Searching for best chapters...")
 
         self.setGroups()
-        tuttiCapitoliLingua=getChapters(api,idManga,language,self.groupsNum)
+        tuttiCapitoliLingua=getChapters(api, idManga, language, self.groupsNum)
 
-        groupsNamesById=getGroupsNamesById(api,tuttiCapitoliLingua)
+        groupsNamesById=getGroupsNamesById(api, tuttiCapitoliLingua)
         # Lista di capitoli
         capitoli=tuttiCapitoliLingua
 
-        capitoli=sorted(capitoli,key=lambda x: x.chapter)
+        capitoli=sorted(capitoli, key=lambda x: x.chapter)
 
-        #Give a color to every element of groupsNamesById
-        groupsColor={group_id: getRainbowColor(i,len(list(groupsNamesById))) for i,group_id in enumerate(list(groupsNamesById))}
+        # Give a color to every element of groupsNamesById
+        groupsColor={group_id: getRainbowColor(i, len(
+            list(groupsNamesById))) for i, group_id in enumerate(list(groupsNamesById))}
 
-        groupsCount=[(group_id,[a.group_id for a in capitoli].count(group_id)) for group_id in list(groupsNamesById)]
+        groupsCount=[(group_id, [a.group_id for a in capitoli].count(group_id))
+                     for group_id in list(groupsNamesById)]
 
-        groupsCount=sorted(groupsCount,key=lambda x: x[1],reverse=True)
+        groupsCount=sorted(groupsCount, key=lambda x: x[1], reverse=True)
 
         deleteLastLine()
         for a in groupsCount:
-            print(color(groupsNamesById[a[0]]+" "+str(a[1]),groupsColor[a[0]]),end=', ')
+            print(color(groupsNamesById[a[0]] +" " +
+                  str(a[1]), groupsColor[a[0]]), end=', ')
         print()
         volume=capitoli[0].volume
-        print(f"Volume {volume}: " ,end='')
+        print(f"Volume {volume}: ", end='')
         for a in capitoli:
             chapter=a.chapter
             group_id=a.group_id
             if a.volume != volume:
                 print()
                 volume=a.volume
-                print(f"Volume {volume}: " ,end='')
-            print(color(chapter,groupsColor[group_id]),end=' ')
+                print(f"Volume {volume}: ", end='')
+            print(color(chapter, groupsColor[group_id]), end=' ')
         print()
 
         input("Press Enter to continue...")
 
         volumesString=input("Which volumes do you want to download? ")
-        #Remove spaces, tabs and end line from volumesString
-        volumesString=volumesString.replace(' ','').replace('\t','').replace('\n','')
+        # Remove spaces, tabs and end line from volumesString
+        volumesString=volumesString.replace(
+            ' ', '').replace('\t', '').replace('\n', '')
 
-        #Parse volumesString into a list called volumes, volumesString is in the format "1,4-7,10"
+        # Parse volumesString into a list called volumes, volumesString is in the format "1,4-7,10"
         volumes=[]
         for a in volumesString.split(','):
             if len(a)==0:
                 continue
             if '-' in a:
-                start,end=a.split('-')
-                volumes.extend(range(int(start),int(end)+1))
+                start, end=a.split('-')
+                volumes.extend(range(int(start), int(end) +1))
             else:
                 volumes.append(int(a))
         if len(volumes) == 0:
@@ -148,13 +150,9 @@ class Manga:
         else:
             printo(f"Volumes: {sorted(volumes)}\n")
 
-
-        self.__init__(idManga,language,locale)
+        self.__init__(idManga, language, locale)
         self.save(volumes)
         self.cbz()
-        
-
-
 
     def metadata(self, volume, a=None):
         if a is None:
@@ -216,10 +214,9 @@ class Manga:
                     arcname="ComicInfo.xml"
                 )
 
-    def save(self,whichVolumes=None):
+    def save(self, whichVolumes=None):
 
-
-        chapters=getChapters(api,self.idManga,self.language,self.groupsNum)
+        chapters=getChapters(api, self.idManga, self.language, self.groupsNum)
 
         covers=api.get_coverart_list(manga=self.idManga, limit=100)
 
@@ -232,7 +229,7 @@ class Manga:
         if whichVolumes is not None:
             whichVolumes=[str(a) for a in whichVolumes]
             chapters=[a for a in chapters if a.volume in whichVolumes]
-        
+
         lastvolume=chapters[0].volume
         incremento=0
 
@@ -243,7 +240,7 @@ class Manga:
                 incremento=0
                 lastvolume=volume
 
-            path = f'{self.path}/images/{volume}'            
+            path = f'{self.path}/images/{volume}'
             createDir(path)
 
             coverPath=f"{path}"
@@ -261,19 +258,19 @@ class Manga:
             start = time.time()
             URLS_PATHS=[[link, f"{path}/{(incremento+i):05}.{getFormat(link)}"]
                         for i, link in enumerate(links)]
-            incremento=incremento+len(links)
+            incremento=incremento +len(links)
             end = time.time()
             sizeDownloaded=download_multiple(URLS_PATHS)
             # sleep(0.5)
 
 
 if __name__ == "__main__":
-    #idManga='d86cf65b-5f6c-437d-a0af-19a31f94ec55'
+    # idManga='d86cf65b-5f6c-437d-a0af-19a31f94ec55'
     idManga='0951feea-ba41-4ad0-9cb0-edadc77eae73'
     # idManga='c0ad8919-4646-4a61-adf9-0fd6d8612efa'
     #manga=Manga(idManga, 'en', 'ja', './///Libri')
     manga=Manga()
     manga.setup()
 
-    #manga.save()
-    #manga.cbz()
+    # manga.save()
+    # manga.cbz()
