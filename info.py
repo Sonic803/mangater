@@ -73,8 +73,11 @@ class Manga:
         self.manga=api.view_manga_by_id(manga_id=idManga)
         self.title=list(self.manga.title.values())[0]
         print(self.title)
-        #print(self.manga)
+
+        printo("Searching for chapters...")
         tuttiCapitoli=getAllChapters(api,idManga)
+
+        deleteLastLine()
         langagues=possibleLanguages(tuttiCapitoli)
         print(langagues)
         language=input("Language: ")
@@ -89,29 +92,66 @@ class Manga:
         if locale not in locales:
             raise Exception("Cover locale not found")
         
+        printo("Searching for best chapters...")
+
         self.setGroups()
         tuttiCapitoliLingua=getChapters(api,idManga,language,self.groupsNum)
 
         groupsNamesById=getGroupsNamesById(api,tuttiCapitoliLingua)
         # Lista di capitoli
-        capitoli=[(a.chapter,a.group_id) for a in tuttiCapitoliLingua]
+        capitoli=tuttiCapitoliLingua
 
-        capitoli=sorted(capitoli,key=lambda x: x[0])
+        capitoli=sorted(capitoli,key=lambda x: x.chapter)
 
         #Give a color to every element of groupsNamesById
         groupsColor={group_id: randomColor() for group_id in list(groupsNamesById)}
 
-        groupsCount=[(group_id,[a[1] for a in capitoli].count(group_id)) for group_id in list(groupsNamesById)]
+        groupsCount=[(group_id,[a.group_id for a in capitoli].count(group_id)) for group_id in list(groupsNamesById)]
 
         groupsCount=sorted(groupsCount,key=lambda x: x[1],reverse=True)
+
+        deleteLastLine()
         for a in groupsCount:
             print(color(groupsNamesById[a[0]]+" "+str(a[1]),groupsColor[a[0]]),end=', ')
         print()
+        volume=capitoli[0].volume
+        print(f"Volume {volume}: " ,end='')
         for a in capitoli:
-            print(color(a[0],groupsColor[a[1]]),end=' ')
-        
-        self.__init__(idManga,language,locale)
+            chapter=a.chapter
+            group_id=a.group_id
+            if a.volume != volume:
+                print()
+                volume=a.volume
+                print(f"Volume {volume}: " ,end='')
+            print(color(chapter,groupsColor[group_id]),end=' ')
+        print()
 
+        input("Press Enter to continue...")
+
+        volumesString=input("Which volumes do you want to download? ")
+        #Remove spaces, tabs and end line from volumesString
+        volumesString=volumesString.replace(' ','').replace('\t','').replace('\n','')
+
+        #Parse volumesString into a list called volumes, volumesString is in the format "1,4-7,10"
+        volumes=[]
+        for a in volumesString.split(','):
+            if len(a)==0:
+                continue
+            if '-' in a:
+                start,end=a.split('-')
+                volumes.extend(range(int(start),int(end)+1))
+            else:
+                volumes.append(int(a))
+        if len(volumes) == 0:
+            volumes=None
+            printo(f"Volumes: all\n")
+        else:
+            printo(f"Volumes: {sorted(volumes)}\n")
+
+
+        self.__init__(idManga,language,locale)
+        manga.save(volumes)
+        manga.cbz()
 
 
 
@@ -188,13 +228,19 @@ class Manga:
         start = 0
         end = 0
         incremento=0
-        for i, chapter in enumerate(chapters):
-
-            volume=chapter.volume
+        if whichVolumes is not None:
             whichVolumes=[str(a) for a in whichVolumes]
-            if whichVolumes is not None:
-                if volume not in whichVolumes:
-                    continue
+            chapters=[a for a in chapters if a.volume in whichVolumes]
+        
+        lastvolume=chapters[0].volume
+        incremento=0
+
+        for i, chapter in enumerate(chapters):
+            volume=chapter.volume
+
+            if volume != lastvolume:
+                incremento=0
+                lastvolume=volume
 
             path = f'{self.path}/images/{volume}'            
             createDir(path)
@@ -227,7 +273,6 @@ if __name__ == "__main__":
     #manga=Manga(idManga, 'en', 'ja', './///Libri')
     manga=Manga()
     manga.setup()
-    print(manga.title)
 
-    manga.save([1])
-    manga.cbz()
+    #manga.save()
+    #manga.cbz()
