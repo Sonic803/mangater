@@ -4,7 +4,7 @@ import os
 import zipfile
 import pathlib
 import time
-from functions import *
+from mangater.functions import *
 from inspect import cleandoc
 
 
@@ -150,8 +150,8 @@ class Manga:
 
 
         self.__init__(idManga,language,locale)
-        manga.save(volumes)
-        manga.cbz()
+        self.save(volumes)
+        self.cbz()
 
 
 
