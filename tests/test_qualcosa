@@ -1,0 +1,3 @@
+from mangater import *
+def test_math():
+    assert 1==1

@@ -1,5 +1,8 @@
 
 *
 !/mangater/
-
+!/mangater/*
+!/tests/
+!/tests/*
+!setup.py
 !.gitignore
