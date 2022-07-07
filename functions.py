@@ -169,4 +169,8 @@ def getGroupsNamesById(api, chapters):
 
 def randomColor():
     #array of 3 random numbers between 0 and 255
-    return [random.randint(0,255) for i in range(3)]
+    return randomVividColor()
+
+def getRainbowColor(i,n):
+    #array of 3 random numbers between 0 and 255
+    return hsv_to_rgb(i/n,1.,1.)

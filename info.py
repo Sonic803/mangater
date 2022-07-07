@@ -104,7 +104,7 @@ class Manga:
         capitoli=sorted(capitoli,key=lambda x: x.chapter)
 
         #Give a color to every element of groupsNamesById
-        groupsColor={group_id: randomColor() for group_id in list(groupsNamesById)}
+        groupsColor={group_id: getRainbowColor(i,len(list(groupsNamesById))) for i,group_id in enumerate(list(groupsNamesById))}
 
         groupsCount=[(group_id,[a.group_id for a in capitoli].count(group_id)) for group_id in list(groupsNamesById)]
 
