@@ -1,1 +1,1 @@
-from .info import *
+from .manga import *

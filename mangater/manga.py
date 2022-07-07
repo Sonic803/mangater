@@ -1,12 +1,9 @@
 import mangadex
-from libra import *
 import os
 import zipfile
 import pathlib
 import time
-from mangater.functions import *
-from inspect import cleandoc
-
+from functions import *
 
 api = mangadex.Api()
 
