@@ -4,6 +4,8 @@ import zipfile
 import pathlib
 import time
 from functions import *
+from print_libra import printo, deleteLastLine, color, loading, bites
+from inspect import cleandoc
 
 api = mangadex.Api()
 
@@ -29,10 +31,12 @@ class Manga:
 
     def getAllChapters(api, manga_id, translatedLanguage=None):
         tuttiCapitoli=[]
+        i=0
         alcuniCapitoli=api.manga_feed(
             manga_id=manga_id, limit=100, offset=100 *i, translatedLanguage=translatedLanguage)
         while len(alcuniCapitoli)> 0:
             alcuniCapitoli.extend(alcuniCapitoli)
+            i+=1
             alcuniCapitoli=api.manga_feed(
                 manga_id=manga_id, limit=100, offset=100 *i, translatedLanguage=translatedLanguage)
         return tuttiCapitoli

@@ -2,8 +2,8 @@
 import os
 import requests
 import concurrent.futures
-from print_libra import *
 from concurrent.futures import as_completed
+from print_libra import hsv_to_rgb, randomVividColor
 
 
 def download(url, path, force=False):
