@@ -80,6 +80,8 @@ class Manga:
         langagues=possibleLanguages(tuttiCapitoli)
         print(langagues)
         language=input("Language: ")
+        if language=='':
+            language=langagues[0]
         if language not in langagues:
             raise Exception("Language not found")
         print()
@@ -88,6 +90,8 @@ class Manga:
         locales=getLocales(api, covers)
         print(locales)
         locale=input("Cover locale: ")
+        if locale=='':
+            locale=locales[0]
         if locale not in locales:
             raise Exception("Cover locale not found")
 
@@ -128,7 +132,6 @@ class Manga:
             print(color(chapter, groupsColor[group_id]), end=' ')
         print()
 
-        input("Press Enter to continue...")
 
         volumesString=input("Which volumes do you want to download? ")
         # Remove spaces, tabs and end line from volumesString
@@ -151,8 +154,15 @@ class Manga:
         else:
             printo(f"Volumes: {sorted(volumes)}\n")
 
+        spazi=input("Cercare di rimuovere spazi bianchi dai bordi dei capitoli? (Y/n) ")
+        if spazi=='' or spazi=='Y':
+            spazi=True
+        else:
+            spazi=False
+        
+        
         self.__init__(idManga, language, locale)
-        self.save(volumes)
+        self.save(volumes, spazi)
         self.cbz()
 
     def metadata(self, volume, a=None):
@@ -215,7 +225,7 @@ class Manga:
                     arcname="ComicInfo.xml"
                 )
 
-    def save(self, whichVolumes=None):
+    def save(self, whichVolumes=None, spazi=False):
 
         chapters=getChapters(api, self.idManga, self.language, self.groupsNum)
 
@@ -261,7 +271,7 @@ class Manga:
                         for i, link in enumerate(links)]
             incremento=incremento +len(links)
             end = time.time()
-            sizeDownloaded=download_multiple(URLS_PATHS)
+            sizeDownloaded=download_multiple(URLS_PATHS, spazi)
             # sleep(0.5)
 
 

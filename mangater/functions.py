@@ -1,16 +1,34 @@
 
 import os
+import numpy as np
 import requests
 import concurrent.futures
 from concurrent.futures import as_completed
 from print_libra import hsv_to_rgb, randomVividColor
+from PIL import Image
+import requests
+from io import BytesIO
+from taglia import *
+import time
 
 
-def download(url, path, force=False):
+def download(url, path, force=False,spazi=False):
     if not os.path.exists(path) or force:
         img_data = requests.get(url).content
-        with open(path, 'wb') as handler:
-            handler.write(img_data)
+
+        if spazi:
+            start=time.time()
+            img = Image.open(BytesIO(img_data)).convert('L')
+            data = np.array(img)
+            dataMeglio=taglia(data)
+            imageMeglio=Image.fromarray(dataMeglio)
+            fine=time.time()
+            print(f"Taglia: {fine-start}")
+            imageMeglio.save(path)
+        else:
+            with open(path, 'wb') as handler:
+                handler.write(img_data)
+        
         return len(img_data)
     return 0
 
@@ -50,15 +68,15 @@ def numero(volume, title=None):
         return volume
 
 
-def download_for_multiple(url, path, force=False):
-    return (download(url, path, force), path)
+def download_for_multiple(url, path, force=False,spazi=False):
+    return (download(url, path, force,spazi), path)
 
 
-def download_multiple(urls_paths, force=False):
+def download_multiple(urls_paths, force=False,spazi=False):
     conta=0
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
         futures = [executor.submit(
-            download_for_multiple, url_path[0], url_path[1]) for url_path in urls_paths]
+            download_for_multiple, url_path[0], url_path[1],False,spazi) for url_path in urls_paths]
         for future in as_completed(futures):
             # retrieve result
             res, path = future.result()
